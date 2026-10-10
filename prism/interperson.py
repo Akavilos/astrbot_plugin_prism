@@ -7,12 +7,7 @@ from .runtime import elapsed_since
 
 import time
 
-try:
-    from astrbot.api import logger
-except Exception:
-    import logging
-
-    logger = logging.getLogger("prism.interperson")
+from astrbot.api import logger
 
 from .affect import MIN_INTENSITY, Mood, update as affect_update
 

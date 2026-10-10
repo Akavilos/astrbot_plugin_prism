@@ -3,12 +3,7 @@
 
 from __future__ import annotations
 
-try:
-    from astrbot.api import logger
-except Exception:
-    import logging
-
-    logger = logging.getLogger("prism")
+from astrbot.api import logger
 
 
 async def pick(context, umo: str, provider_id: str = ""):

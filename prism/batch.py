@@ -9,12 +9,7 @@ import json
 import re
 import time
 
-try:
-    from astrbot.api import logger
-except Exception:
-    import logging
-
-    logger = logging.getLogger("prism")
+from astrbot.api import logger
 
 
 BATCH_SIZE = 20

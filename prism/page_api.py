@@ -6,12 +6,7 @@ from __future__ import annotations
 import json
 import time
 
-try:
-    from astrbot.api import logger
-except Exception:
-    import logging
-
-    logger = logging.getLogger("prism")
+from astrbot.api import logger
 
 
 PREFIX = "/astrbot_plugin_prism/page"

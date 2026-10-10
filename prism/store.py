@@ -9,12 +9,7 @@ import sqlite3
 import time
 from pathlib import Path
 
-try:
-    from astrbot.api import logger
-except Exception:
-    import logging
-
-    logger = logging.getLogger("prism")
+from astrbot.api import logger
 
 
 SCHEMA_VERSION = 1

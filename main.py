@@ -53,7 +53,7 @@ MAX_OPEN_SECONDS = 2 * 3600
 TOPIC_CHECK_INTERVAL = 3 * 60
 
 
-@star.register(PLUGIN_NAME, "Akavilos", "棱镜 · 人类记忆 (Prism)", "0.2.2")
+@star.register(PLUGIN_NAME, "Akavilos", "棱镜 · 人类记忆 (Prism)", "0.2.3")
 class PrismPlugin(star.Star):
     def __init__(self, context: star.Context, config: dict | None = None) -> None:
         super().__init__(context)

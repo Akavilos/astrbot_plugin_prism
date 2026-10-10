@@ -9,14 +9,7 @@ from . import runtime as runtime_mod
 import json
 import re
 
-try:
-    from astrbot.api import logger
-except Exception:
-
-
-    import logging
-
-    logger = logging.getLogger("prism")
+from astrbot.api import logger
 
 from .goals import EVENTS, GoalEvent, Relation, Touch
 from .reading import RelationRead, ReadResult

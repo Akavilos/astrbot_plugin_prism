@@ -1,0 +1,15 @@
+name: "astrbot_plugin_prism"
+display_name: "棱镜 · 人类记忆 (Prism)"
+author: Akavilos
+version: "0.2.2"
+desc: "维护主观心情、人物感受与联想回忆；可与光谱协作形成状态驱动的角色对话，是可选组件。"
+repo: https://github.com/Akavilos/astrbot_plugin_prism
+astrbot_version: ">=4.24.0"
+support_platforms:
+  - aiocqhttp
+short_desc: "主观心情、人物感受与联想回忆"
+tags:
+  - 记忆
+  - 情感
+  - 角色扮演
+  - 联想

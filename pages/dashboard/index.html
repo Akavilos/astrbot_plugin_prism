@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>棱镜 · 数据管理</title>
+<style>
+/* 面板样式：布局、列表、编辑表单和页内交互提示。 */
+
+  :root{
+    --bg:#0f1218; --panel:#161b24; --line:#242c3a; --fg:#d8dee9;
+    --dim:#7c8798; --hi:#7aa2f7; --ok:#9ece6a; --warn:#e0af68; --bad:#f7768e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:13px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);
+         display:flex;align-items:baseline;gap:14px}
+  h1{font-size:16px;margin:0;font-weight:600}
+  .sub{color:var(--dim);font-size:12px}
+  nav{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--line)}
+  nav button{background:none;border:none;color:var(--dim);padding:9px 15px;
+             cursor:pointer;font-size:13px;border-bottom:2px solid transparent}
+  nav button.on{color:var(--fg);border-bottom-color:var(--hi)}
+  main{padding:18px 20px;max-width:1180px}
+  .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:7px;
+        padding:11px 15px;min-width:105px}
+  .card b{display:block;font-size:19px;color:var(--hi);font-weight:600}
+  .card span{color:var(--dim);font-size:11px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{color:var(--dim);font-weight:500;font-size:11px;
+     position:sticky;top:0;background:var(--bg)}
+  tr:hover{background:#1a2029}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .dim{color:var(--dim)}
+  .tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;
+       background:#1e2632;color:var(--dim);margin-right:4px}
+  .tag.pub{background:#1d2c1f;color:var(--ok)}
+  .tag.pri{background:#2c1d24;color:var(--warn)}
+  .bar{height:5px;background:#1e2632;border-radius:3px;overflow:hidden;
+       width:78px;display:inline-block;vertical-align:middle}
+  .bar i{display:block;height:100%;background:var(--hi)}
+  .btn{background:#1e2632;border:1px solid var(--line);color:var(--fg);
+       padding:3px 9px;border-radius:4px;cursor:pointer;font-size:12px}
+  .btn:hover{border-color:var(--hi);color:var(--hi)}
+  .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+  .muted{color:var(--dim);padding:26px;text-align:center}
+  .detail{background:var(--panel);border:1px solid var(--line);border-radius:7px;
+          padding:15px;margin-top:14px}
+  .kv{display:grid;grid-template-columns:78px 1fr;gap:5px 11px;margin-bottom:11px}
+  .kv b{color:var(--dim);font-weight:400}
+  .narr{white-space:pre-wrap;background:#12161d;border-left:2px solid var(--hi);
+        padding:9px 12px;border-radius:0 5px 5px 0;margin:8px 0}
+  .rev{color:var(--warn);font-size:12px;margin-top:4px}
+  input,textarea{background:#12161d;border:1px solid var(--line);color:var(--fg);
+                 border-radius:4px;padding:5px 8px;font:inherit;width:100%}
+  textarea{min-height:74px;resize:vertical}
+                                                    
+  .confirm{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+           background:var(--panel);border:1px solid var(--bad);border-radius:7px;
+           padding:11px 15px;display:flex;gap:11px;align-items:center;
+           box-shadow:0 6px 22px #0009;z-index:99}
+</style>
+</head>
+<body>
+<!-- 棱镜数据面板：查看主观状态、经历场景、记忆强度与联想关系。 -->
+<header>
+  <h1>棱镜 · 数据管理</h1>
+  <span class="sub">她记得什么 · 想得起什么 · 能不能说</span>
+</header>
+<nav id="nav"></nav>
+<main id="main"><div class="muted">载入中…</div></main>
+
+<script>
+// 面板交互：读取后端数据，将编辑结果提交到对应接口，并更新当前视图。
+
+                                         
+  
+                                               
+                                      
+                                             
+  
+                                                      
+                                      
+                          
+                                         
+  
+                                 
+  
+                                                 
+                                                                         
+                                                      
+  
+                                                     
+                                       
+  
+                                                          
+                                  
+  
+                               
+                                                                    
+                                                   
+  
+                                                                   
+const BASE = "page";                      
+
+const TABS = [
+  ["overview","概览"], ["scenes","场景"], ["traces","记忆强度"],
+  ["graph","联想图"], ["persons","认识的人"],
+];
+let cur = "overview";
+
+function bridgeReady() {
+  return new Promise((resolve, reject) => {
+    let n = 0;
+    (function poll() {
+      if (window.AstrBotPluginPage) return resolve(window.AstrBotPluginPage);
+      if (++n > 100) return reject(new Error("面板桥接未就绪（window.AstrBotPluginPage 缺失）"));
+      setTimeout(poll, 50);
+    })();
+  });
+}
+
+                                                  
+function splitPath(path) {
+  const i = path.indexOf("?");
+  if (i === -1) return [path, {}];
+  const params = {};
+  for (const kv of path.slice(i + 1).split("&")) {
+    if (!kv) continue;
+    const [k, v] = kv.split("=");
+    params[decodeURIComponent(k)] = decodeURIComponent(v || "");
+  }
+  return [path.slice(0, i), params];
+}
+
+const api = async (path, opts) => {
+  const bridge = await bridgeReady();
+  const [ep, params] = splitPath(path);
+  const endpoint = BASE + ep;                                                   
+  let j;
+  if (opts && (opts.method || "GET").toUpperCase() === "POST") {
+    const body = opts.body ? JSON.parse(opts.body) : {};
+    j = await bridge.apiPost(endpoint, body);
+  } else {
+    j = await bridge.apiGet(endpoint, params);
+  }
+                                 
+  if (j && j.ok === false) throw new Error(j.error || "请求失败");
+  return j && "data" in j ? j.data : j;
+};
+const esc = s => String(s ?? "").replace(/[&<>"]/g,
+              c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = t => t ? new Date(t*1000).toLocaleString("zh-CN",
+                    {month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—";
+
+                                                       
+function confirmBar(msg, onYes){
+  document.querySelector(".confirm")?.remove();
+  const d = document.createElement("div");
+  d.className = "confirm";
+  d.innerHTML = `<span>${esc(msg)}</span>`;
+  const yes = document.createElement("button");
+  yes.className = "btn danger"; yes.textContent = "确定删除";
+  yes.onclick = () => { d.remove(); onYes(); };
+  const no = document.createElement("button");
+  no.className = "btn"; no.textContent = "取消";
+  no.onclick = () => d.remove();
+  d.append(yes, no);
+  document.body.appendChild(d);
+}
+
+           
+const VIEWS = {
+  async overview(){
+    const d = await api("/overview");
+    const m = await api("/mood");
+    const [p,a,dd] = m.mood;
+    return `<div class="cards">
+      <div class="card"><b>${d.scenes}</b><span>场景</span></div>
+      <div class="card"><b>${d.scenes_with_narrative}</b><span>有叙事的</span></div>
+      <div class="card"><b>${d.traces_alive}</b><span>还够得着</span></div>
+      <div class="card"><b>${d.traces_forgotten}</b><span>淡到想不起</span></div>
+      <div class="card"><b>${d.graph_nodes}</b><span>图节点</span></div>
+      <div class="card"><b>${d.graph_edges}</b><span>图边</span></div>
+    </div>
+    <div class="detail">
+      <div class="kv">
+        <b>心情</b><span>愉悦 ${p.toFixed(2)} · 唤醒 ${a.toFixed(2)} · 支配 ${dd.toFixed(2)}</span>
+        <b>读作</b><span>${esc(m.describe)}</span>
+        <b>更新</b><span class="dim">${fmt(m.updated_at)}${m.stale?' <span class="tag pri">可能过时</span>':''}</span>
+      </div>
+      <div class="dim" style="font-size:12px">这份心情就是跨插件共享出去的那一份。</div>
+    </div>`;
+  },
+
+  async scenes(){
+    const rows = await api("/scenes");
+    if(!rows.length) return `<div class="muted">还没有场景。</div>`;
+    return `<table><thead><tr>
+        <th>时间</th><th>叙事</th><th>在场</th><th>痕迹</th><th>场合</th><th></th>
+      </tr></thead><tbody>${rows.map(r=>`<tr>
+        <td class="mono dim">${esc(r.time)}</td>
+        <td>${r.has_narrative ? esc(r.narrative) : '<span class="dim">（还没写）</span>'}</td>
+        <td class="dim">${r.people}人 / ${r.moments}刻</td>
+        <td><span class="bar"><i style="width:${Math.min(100,r.peak_salience*250)}%"></i></span>
+            <span class="dim mono">${r.peak_salience.toFixed(2)}</span></td>
+        <td>${r.public?'<span class="tag pub">群</span>':'<span class="tag pri">私</span>'}</td>
+        <td><button class="btn" onclick="openScene('${esc(r.scene_id)}')">详情</button></td>
+      </tr>`).join("")}</tbody></table><div id="sd"></div>`;
+  },
+
+  async traces(){
+    const rows = await api("/traces");
+    if(!rows.length) return `<div class="muted">还没有记忆。</div>`;
+    return `<table><thead><tr>
+        <th>记忆</th><th>强度</th><th>想起过</th><th>编码</th><th>状态</th><th></th>
+      </tr></thead><tbody>${rows.map(r=>`<tr>
+        <td>${esc(r.text) || '<span class="dim">（无叙事）</span>'}</td>
+        <td><span class="bar"><i style="width:${Math.min(100,r.strength*100)}%"></i></span>
+            <span class="dim mono">${r.strength.toFixed(3)}</span></td>
+        <td class="dim">${r.rehearsals} 次</td>
+        <td class="mono dim">${esc(r.time)}</td>
+        <td>${r.forgotten?'<span class="tag pri">淡到够不着</span>':'<span class="tag pub">清楚</span>'}</td>
+        <td><button class="btn" onclick="boost('${esc(r.key)}')">加强</button></td>
+      </tr>`).join("")}</tbody></table>`;
+  },
+
+  async graph(){
+    const d = await api("/graph");
+    const byKind = d.nodes.reduce((a,n)=>(a[n.kind]=(a[n.kind]||0)+1,a),{});
+    return `<div class="cards">
+        <div class="card"><b>${d.nodes.length}</b><span>节点</span></div>
+        <div class="card"><b>${d.edges.length}</b><span>边</span></div>
+        <div class="card"><b>${byKind.scene||0}</b><span>场景</span></div>
+        <div class="card"><b>${byKind.person||0}</b><span>人</span></div>
+      </div>
+      <div class="dim" style="font-size:12px;margin-bottom:9px">
+        边是白捡的：场景↔人（在场）、人↔人（共现够多）、场景↔场景（时间相邻 / 同主题）。
+        扇出越大，每条边分到的激活越少——这是「泛泛之交」的数学形式。
+      </div>
+      <table><thead><tr><th>节点</th><th>类型</th><th>连了几条</th></tr></thead><tbody>
+      ${d.nodes.sort((a,b)=>b.salience-a.salience).slice(0,60).map(n=>{
+        const deg = d.edges.filter(e=>e.a===n.id||e.b===n.id).length;
+        return `<tr><td>${esc(n.label)}</td>
+          <td><span class="tag">${esc(n.kind)}</span></td>
+          <td class="mono dim">${deg}</td></tr>`;
+      }).join("")}</tbody></table>`;
+  },
+
+  async persons(){
+    const rows = await api("/persons");
+    if(!rows.length) return `<div class="muted">还没认识谁。</div>`;
+    return `<table><thead><tr><th>人</th><th>出现过的场景</th><th>跟谁相熟</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td class="mono">${esc(r.person_id)}</td>
+        <td class="mono dim">${r.scenes}</td>
+        <td class="dim">${r.acquainted_with.map(esc).join("、") || "—"}</td>
+      </tr>`).join("")}</tbody></table>`;
+  },
+};
+
+           
+async function openScene(sid){
+  const d = await api("/scenes/detail?scene_id=" + encodeURIComponent(sid));
+  const box = document.getElementById("sd");
+  box.innerHTML = `<div class="detail">
+    <div class="kv">
+      <b>时间</b><span>${esc(d.time)} · ${d.moments.length} 刻 · ${d.present.length} 人
+        ${d.public?'<span class="tag pub">公开场合</span>':'<span class="tag pri">私下</span>'}</span>
+      <b>痕迹</b><span>${d.peak_salience.toFixed(3)}
+        ${d.peak_emotions.map(e=>`<span class="tag">${esc(e[0])} ${e[1].toFixed(2)}</span>`).join("")}</span>
+      <b>在场</b><span class="dim mono">${d.present.map(esc).join("、")}</span>
+    </div>
+    <b class="dim">她的回忆（可编辑）</b>
+    <textarea id="sc-narr">${esc(d.narrative)}</textarea>
+    <div style="margin:8px 0"><button class="btn" onclick="saveScene('${esc(d.scene_id)}')">保存</button>
+      <button class="btn danger" onclick="delScene('${esc(d.scene_id)}')">删除这段</button>
+      <span class="dim" style="font-size:12px;margin-left:8px">
+        只改叙事层；「当时发生了什么」不会被改。</span></div>
+    ${d.revisions.length?`<b class="dim">被改写过 ${d.revisions.length} 次</b>`+
+      d.revisions.map(r=>`<div class="rev">「${esc(r.before.slice(0,40))}」→「${esc(r.after.slice(0,40))}」
+        <span class="dim">（${esc(r.reason)} · ${esc(r.at)}）</span></div>`).join(""):""}
+    <b class="dim">当时发生了什么</b>
+    <table>${d.moments.map(m=>`<tr>
+      <td class="mono dim" style="width:76px">${esc(m.time)}</td>
+      <td style="width:78px" class="dim">${m.is_hers?"她":esc(m.speaker)}</td>
+      <td>${esc(m.text.slice(0,80))}</td>
+      <td class="mono dim">${m.salience.toFixed(2)}</td></tr>`).join("")}</table>
+  </div>`;
+  box.scrollIntoView({behavior:"smooth"});
+}
+async function saveScene(sid){
+  const narrative = document.getElementById("sc-narr").value;
+  await api("/scenes/update", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({scene_id:sid, narrative})});
+  render();
+}
+function delScene(sid){
+  confirmBar("删掉她这一段经历？此操作不可撤销。", async ()=>{
+    await api("/scenes/delete", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({scene_id:sid})});
+    render();
+  });
+}
+async function boost(key){
+  await api("/traces/boost", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({key, times:3})});
+  render();
+}
+
+              
+function nav(){
+  document.getElementById("nav").innerHTML = TABS.map(([k,label])=>
+    `<button class="${k===cur?'on':''}" onclick="go('${k}')">${label}</button>`).join("");
+}
+async function go(k){ cur = k; nav(); await render(); }
+async function render(){
+  nav();
+  const el = document.getElementById("main");
+  el.innerHTML = `<div class="muted">载入中…</div>`;
+  try { el.innerHTML = await VIEWS[cur](); }
+  catch(e){ el.innerHTML = `<div class="muted">出错了：${esc(e.message)}</div>`; }
+}
+nav();
+render();
+</script>
+</body>
+</html>
